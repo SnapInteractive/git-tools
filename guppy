@@ -1,0 +1,59 @@
+#!/bin/bash
+# Pull fresh code from upstream master, push to origin master
+
+CHECK_UPSTREAM=$(git remote -v | grep '^upstream\>.\+SnapInteractive/AYI.git')
+if [ -z "$CHECK_UPSTREAM" ]; then
+	echo "You need to be in a git repo with an \"upstream\" remote for SnapInteractive/AYI!"
+	exit 1
+fi
+
+CHECK_ORIGIN=$(git remote -v | grep '^origin.\+(push)$')
+if [ -z "$CHECK_ORIGIN" ]; then
+	echo "You need to be in a git repo with a pushable \"origin\" remote!"
+	exit 1
+fi
+
+
+on_exit () {
+	if [ -n "$ON_BRANCH" ]; then
+		echo "Switching back to $ON_BRANCH..."
+		git co "$ON_BRANCH"
+	fi
+	if [ -n "$GIT_STASH" ]; then
+		echo "Restoring stash..."
+		git stash pop
+	fi
+}
+trap on_exit EXIT
+
+GIT_STASH=$(git status --porcelain | grep -v '^??')
+
+if [ -n "$GIT_STASH" ]; then
+	echo "Stashing current state..."
+	git stash
+fi
+
+ON_MASTER=$(git branch | grep '^* master$')
+ON_BRANCH=""
+
+if [ -z "$ON_MASTER" ]; then
+	ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
+	echo "Switching to master..."
+	git checkout master
+	if [ $? -ne 0 ]; then
+		echo "Failed to checkout master!?"
+		exit 1
+	fi
+fi
+
+# Now we're on master in a clean state; push and pull away
+
+git pull --ff-only upstream master
+
+if [ $? -ne 0 ]; then
+	echo "You should not be working in your master branch... you will need to manually merge changes from upstream."
+	exit 1
+fi
+
+git push origin master
+
