@@ -1,1 +1,13 @@
 Tools for snappers for working with git and stuff
+
+guppy
+-----
+
+Does a pull from upstream master and push to origin master. You can be in a
+branch with uncommitted work; your stuff will be safely stashed/unstashed and
+you will be automatically switched to master for the pull/push and back again
+when done.
+
+Will exit with a warning if the pull into your master branch requires a merge;
+you should be doing all work in topic branches so that your master branch can
+do fast-forward-only pulls.
