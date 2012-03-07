@@ -11,3 +11,9 @@ when done.
 Will exit with a warning if the pull into your master branch requires a merge;
 you should be doing all work in topic branches so that your master branch can
 do fast-forward-only pulls.
+
+proon
+-----
+
+Cleans out old branches; removes all branches that have been merged into master
+and pushes the removal to origin.
