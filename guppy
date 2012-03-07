@@ -51,7 +51,7 @@ fi
 git pull --ff-only upstream master
 
 if [ $? -ne 0 ]; then
-	echo "You should not be working in your master branch... you will need to manually merge changes from upstream."
+	echo "Could not pull cleanly into your master branch... you will need to manually merge changes from upstream."
 	exit 1
 fi
 
