@@ -1,0 +1,11 @@
+#!/bin/bash
+# Just push current branch to same branch at origin.
+# Accepts -f to allow non-ff updates (+branchname)
+ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
+
+if [ "$1" = "-f" ]; then
+	git push origin "+$ON_BRANCH"
+else
+	git push origin "$ON_BRANCH"
+fi
+
