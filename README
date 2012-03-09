@@ -23,3 +23,9 @@ porg
 
 Just does "git push origin BRANCH" for whatever branch you're currently on.
 Adding -f makes it "git push origin +BRANCH"
+
+
+INSTALLATION
+
+Add the directory containing these files to your PATH or symlink to them
+individually from a directory already in your PATH, e.g. /home/yourname/bin.
