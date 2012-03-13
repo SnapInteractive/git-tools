@@ -1,0 +1,24 @@
+#!/bin/bash
+# Get a report on who has merged my pull requests.
+# Only looks at local data -- whatever you have pulled from upstream.
+# Won't work with pulley merges until pulley puts the requester's username into
+# commit messages!
+
+GH_USER=$(git remote -v | grep '^origin' | head -n 1 | sed 's/.\+:\(.\+\)\/.\+/\1/')
+
+if [ -z "$GH_USER" ]; then
+	echo 'Could not locate your origin repo; are you in a repo with remote "origin?"';
+	exit 1;
+fi
+
+PRS=$(git log | grep -B 3 "Merge pull request #[0-9]\+ from $GH_USER\|Landing pull request [0-9]\+ from $GH_USER")
+
+ALL_PULLERS=$(echo "$PRS" | grep '^Author' | sed 's/^Author: //' | sort | uniq -c | sort -nr)
+
+echo "All pullers:"
+echo "$ALL_PULLERS"
+
+LAST_FIVE=$(echo "$PRS" | grep '^Author\|^Date' | head -n 10 | sed 's/^Author: \|^Date: //')
+echo "Last five pullers:"
+echo "$LAST_FIVE"
+
