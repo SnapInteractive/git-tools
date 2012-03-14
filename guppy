@@ -49,6 +49,7 @@ fi
 # Now we're on master in a clean state; push and pull away
 
 git pull --ff-only upstream master
+git submodule update
 
 if [ $? -ne 0 ]; then
 	echo "Could not pull cleanly into your master branch... you will need to manually merge changes from upstream."
