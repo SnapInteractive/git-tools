@@ -13,7 +13,14 @@
 
 GH_REPO=AYI
 
-# this is set to use my vim branch diffing tool; change it if you like
+# Here's where you set your diff'ing tool:
+#
+# If you don't have a tool ready, use this; it will display a list of files
+# that differ and then just drop you into a child shell so you can examine
+# changes manually; when you exit the shell your state will be restored.
+DIFF_CMD="git diff --name-status master; bash"
+#
+# This is my vim branch diffing tool; change it if you like.
 DIFF_CMD="vim '+call Gbdiff(\"master\")'"
 
 # Are you in the right repo?
