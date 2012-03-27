@@ -34,6 +34,14 @@ repo, so you'll only see what you've pulled from upstream master.
 The pulley tool does not include both participant's usernames in its commit log
 entries, so pulley commits are not currently included in the reports!
 
+purq
+----
+
+A tool for grabbing and examining pull requests. Call it with a PR id or user
+and branch name. Requires setup; you'll need github.com entries in your
+~/.netrc file and some kind of tool for examining the diff's in the PR (the
+code there currently uses vim with a custom function that opens side-by-side
+diffs in tabs).
 
 INSTALLATION
 

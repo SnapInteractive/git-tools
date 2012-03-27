@@ -1,0 +1,100 @@
+#!/bin/bash
+# Examine a pull request or branch, comparing it to your master branch.
+# Will stash your current work and restore when you're done.
+#
+# Usage: $0 <github username> <branch name> OR $0 <pull request #>
+# 
+# You must have your .netrc file set up for github access; it should contain
+# two lines like this:
+# machine github.com login USERNAME password PASSWORD
+# machine api.github.com login USERNAME password PASSWORD
+#
+# If you're creating a new .netrc file please chmod 600 it.
+
+GH_REPO=AYI
+
+# this is set to use my vim branch diffing tool; change it if you like
+DIFF_CMD="vim '+call Gbdiff(\"master\")'"
+
+# Are you in the right repo?
+CHECK_ORIGIN=$(git remote -v | grep "^origin.\+/$GH_REPO\.git.\+(push)$")
+if [ -z "$CHECK_ORIGIN" ]; then
+	echo "You need to be in a \"$GH_REPO\" clone with a pushable \"origin\" remote!"
+	exit 1
+fi
+
+# Save whatever you're working on
+
+GIT_STASH=$(git status --porcelain | grep -v '^??')
+
+if [ -n "$GIT_STASH" ]; then
+	echo "Stashing current state..."
+	git stash
+fi
+
+ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
+
+# This will restore it when finished here
+
+on_exit () {
+	echo "Switching back to $ON_BRANCH..."
+	git co "$ON_BRANCH"
+	if [ -n "$GIT_STASH" ]; then
+		echo "Restoring stash..."
+		git stash pop
+	fi
+
+	if [ -n "$TEMP_BRANCH" ]; then
+		git branch -D "$TEMP_BRANCH"
+	fi
+}
+trap on_exit EXIT
+
+if [ -z $2 ]; then
+	echo -n "Fetching pull request info from github..."
+	GH_PR=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/AYI/pulls/$1")
+	echo " Done."
+	LABEL=$(echo "$GH_PR" | grep -m 1 '^[^"]*"label"')
+	if [ -z "$LABEL" ]; then
+		echo "Pull request not found or could not get head.label field from pull request!"
+		echo "To see the pull request data, run:"
+		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/AYI/pulls/$1"
+		exit 1
+	fi
+	GH_USER=$(echo "$LABEL" | sed 's/^.*"label": "\([^"]\+\):.\+$/\1/')
+	GH_BRANCH=$(echo "$LABEL" | sed 's/^.*"label": "[^"]\+:\([^"]\+\).\+$/\1/')
+
+	if [ -z "$GH_USER" -o -z "$GH_BRANCH" -o -n "$(echo "$GH_USER:$GH_BRANCH" | grep '"')" ]; then
+		echo "Couldn't extract github user:branch from PR? ($GH_USER:$GH_BRANCH)"
+		exit 1
+	fi
+else
+	GH_USER="$1"
+	GH_BRANCH="$2"
+fi
+
+TEMP_BRANCH="$GH_USER-$GH_BRANCH"
+
+git co -b "$TEMP_BRANCH" master
+
+if [ $? -ne 0 ]; then
+	echo "Could not switch to temporary branch!? Weird."
+	exit 1
+fi
+
+echo -n "Pulling changes..."
+git pull --quiet https://github.com/$GH_USER/$GH_REPO.git "$GH_BRANCH"
+
+if [ $? -ne 0 ]; then
+	echo
+	echo "Failed fetching branch \"$GH_BRANCH\" from \"$GH_USER\"'s repo!"
+	exit 1
+fi
+
+echo " Done."
+echo "Launching diff'er..."
+
+eval $DIFF_CMD
+
+exit 0
+
