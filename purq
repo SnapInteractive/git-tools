@@ -73,6 +73,8 @@ if [ -z $2 ]; then
 
 	if [ -z "$GH_USER" -o -z "$GH_BRANCH" -o -n "$(echo "$GH_USER:$GH_BRANCH" | grep '"')" ]; then
 		echo "Couldn't extract github user:branch from PR? ($GH_USER:$GH_BRANCH)"
+		echo "To see the pull request data, run:"
+		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/AYI/pulls/$1"
 		exit 1
 	fi
 else
