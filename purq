@@ -61,7 +61,7 @@ if [ -z $2 ]; then
 	echo -n "Fetching pull request info from github..."
 	GH_PR=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/AYI/pulls/$1")
 	echo " Done."
-	LABEL=$(echo "$GH_PR" | grep -m 1 '^[^"]*"label"')
+	LABEL=$(echo "$GH_PR" | grep -v 'SnapInteractive' | grep -m 1 '^[^"]*"label"')
 	if [ -z "$LABEL" ]; then
 		echo "Pull request not found or could not get head.label field from pull request!"
 		echo "To see the pull request data, run:"
