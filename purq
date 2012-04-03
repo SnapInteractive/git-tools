@@ -18,10 +18,10 @@ GH_REPO=AYI
 # If you don't have a tool ready, use this; it will display a list of files
 # that differ and then just drop you into a child shell so you can examine
 # changes manually; when you exit the shell your state will be restored.
-DIFF_CMD="git diff --name-status master; bash"
+DIFF_CMD="git diff --name-status %s; bash"
 #
 # This is my vim branch diffing tool; change it if you like.
-DIFF_CMD="vim '+call Gbdiff(\"master\")'"
+DIFF_CMD="vim '+call Gbdiff(\"%s\")'"
 
 # Are you in the right repo?
 CHECK_ORIGIN=$(git remote -v | grep "^origin.\+/$GH_REPO\.git.\+(push)$")
@@ -103,7 +103,7 @@ fi
 echo " Done."
 echo "Launching diff'er..."
 
-eval $DIFF_CMD
+eval $(printf "$DIFF_CMD" "$(git merge-base HEAD master)")
 
 exit 0
 
