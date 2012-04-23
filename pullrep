@@ -1,8 +1,6 @@
 #!/bin/bash
 # Get a report on who has merged my pull requests.
 # Only looks at local data -- whatever you have pulled from upstream.
-# Won't work with pulley merges until pulley puts the requester's username into
-# commit messages!
 
 GH_USER=$(git remote -v | grep '^origin' | head -n 1 | sed 's/.\+:\(.\+\)\/.\+/\1/')
 
