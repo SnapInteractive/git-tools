@@ -2,7 +2,12 @@
 # Get a report on who has merged my pull requests.
 # Only looks at local data -- whatever you have pulled from upstream.
 
-GH_USER=$(git remote -v | grep '^origin' | head -n 1 | sed 's/.\+:\(.\+\)\/.\+/\1/')
+# You can provide someone else's name as first argument!
+if [ -z $1 ]; then
+	GH_USER=$(git remote -v | grep '^origin' | head -n 1 | sed 's/.\+:\(.\+\)\/.\+/\1/')
+else
+	GH_USER="$1"
+fi
 
 if [ -z "$GH_USER" ]; then
 	echo 'Could not locate your origin repo; are you in a repo with remote "origin?"';
