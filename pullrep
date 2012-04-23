@@ -16,6 +16,13 @@ ALL_PULLERS=$(echo "$PRS" | grep '^Author' | sed 's/^Author: //' | sort | uniq -
 echo "All pullers:"
 echo "$ALL_PULLERS"
 
+TOTAL_PULLS=0
+while read -d ' ' C; do
+	TOTAL_PULLS=$(( $TOTAL_PULLS + $C ))
+done <<< $(echo "$ALL_PULLERS" | awk '{print $1}')
+
+echo "Total pulls: $TOTAL_PULLS"
+
 LAST_FIVE=$(echo "$PRS" | grep '^Author\|^Date' | head -n 10 | sed 's/^Author: \|^Date: //')
 echo "Last five pullers:"
 echo "$LAST_FIVE"
