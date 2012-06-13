@@ -14,7 +14,7 @@ else
 fi
 
 for BRANCH in $(git branch --merged master | grep -v '\<master\>\|^\*'); do
-	if [ -n $INTERACTIVE ]; then
+	if [ -n "$INTERACTIVE" ]; then
 		read -p "$(basename $0): remove branch '$BRANCH'? (y)" RESPONSE
 		if [  "$RESPONSE" != 'y' ] && [ "$RESPONSE" != '' ]; then
 			continue
