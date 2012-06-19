@@ -1,7 +1,7 @@
 #!/bin/bash
 # Pull fresh code from upstream master, push to origin master
 
-CHECK_UPSTREAM=$(git remote -v | grep '^upstream\>.\+SnapInteractive/AYI.git')
+CHECK_UPSTREAM=$(git remote -v | grep '^upstream\>.\+SnapInteractive/AYI\>')
 if [ -z "$CHECK_UPSTREAM" ]; then
 	echo "You need to be in a git repo with an \"upstream\" remote for SnapInteractive/AYI!"
 	exit 1
