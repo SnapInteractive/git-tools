@@ -24,7 +24,7 @@ DIFF_CMD="git diff --name-status %s; bash"
 DIFF_CMD="vim '+call Gbdiff(\"%s\")'"
 
 # Are you in the right repo?
-CHECK_ORIGIN=$(git remote -v | grep "^origin.\+/$GH_REPO\.git.\+(push)$")
+CHECK_ORIGIN=$(git remote -v | grep "^origin.\+/$GH_REPO\>.\+(push)$")
 if [ -z "$CHECK_ORIGIN" ]; then
 	echo "You need to be in a \"$GH_REPO\" clone with a pushable \"origin\" remote!"
 	exit 1
