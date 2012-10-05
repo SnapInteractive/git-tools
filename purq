@@ -59,35 +59,41 @@ trap on_exit EXIT
 
 if [ -z $2 ]; then
 	echo -n "Fetching pull request info from github..."
-	GH_PR=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/AYI/pulls/$1")
+	GH_PR=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$GH_REPO/pulls/$1")
+	PR_INFO=$(echo "$GH_PR" | php -r '
+		$r = json_decode(file_get_contents("php://stdin"));
+		if (isset($r->head->ref, $r->head->repo->owner->login, $r->base->sha)) {
+			echo $r->head->repo->owner->login, PHP_EOL,
+				$r->head->ref, PHP_EOL,
+				$r->base->sha, PHP_EOL;
+		} else {
+			exit(1);
+		}
+	')
+	if [ $? -ne 0 ]; then
+		echo "Pull request not found or not decodable!"
+		echo "To see the pull request data, run:"
+		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/$GH_REPO/pulls/$1"
+		exit 1
+	fi
 	echo " Done."
-	LABEL=$(echo "$GH_PR" | grep -v 'SnapInteractive' | grep -m 1 '^[^"]*"label"')
-	if [ -z "$LABEL" ]; then
-		echo "Pull request not found or could not get head.label field from pull request!"
-		echo "To see the pull request data, run:"
-		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/AYI/pulls/$1"
-		exit 1
-	fi
-	GH_USER=$(echo "$LABEL" | sed 's/^.*"label": "\([^"]\+\):.\+$/\1/')
-	GH_BRANCH=$(echo "$LABEL" | sed 's/^.*"label": "[^"]\+:\([^"]\+\).\+$/\1/')
-
-	if [ -z "$GH_USER" -o -z "$GH_BRANCH" -o -n "$(echo "$GH_USER:$GH_BRANCH" | grep '"')" ]; then
-		echo "Couldn't extract github user:branch from PR? ($GH_USER:$GH_BRANCH)"
-		echo "To see the pull request data, run:"
-		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/AYI/pulls/$1"
-		exit 1
-	fi
+	GH_USER=$(sed -n '1p' <(echo "$PR_INFO"))
+	GH_BRANCH=$(sed -n '2p' <(echo "$PR_INFO"))
+	BASE=$(sed -n '3p' <(echo "$PR_INFO"))
 else
 	GH_USER="$1"
 	GH_BRANCH="$2"
+	BASE="master"
+	# would like to improve by searching for actual base of branch but API is not good for this
 fi
 
 TEMP_BRANCH="$GH_USER-$GH_BRANCH"
 
-git checkout -b "$TEMP_BRANCH" master
+git checkout -b "$TEMP_BRANCH" "$BASE" > /dev/null 2>&1
 
 if [ $? -ne 0 ]; then
-	echo "Could not switch to temporary branch!? Weird."
+	echo "git checkout -b \"$TEMP_BRANCH\" \"$BASE\" failed."
+	echo "Do you have ref $BASE in your local repo?"
 	exit 1
 fi
 
