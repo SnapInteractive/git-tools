@@ -45,7 +45,7 @@ ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
 
 on_exit () {
 	echo "Switching back to $ON_BRANCH..."
-	git co "$ON_BRANCH"
+	git checkout "$ON_BRANCH"
 	if [ -n "$GIT_STASH" ]; then
 		echo "Restoring stash..."
 		git stash pop
@@ -84,7 +84,7 @@ fi
 
 TEMP_BRANCH="$GH_USER-$GH_BRANCH"
 
-git co -b "$TEMP_BRANCH" master
+git checkout -b "$TEMP_BRANCH" master
 
 if [ $? -ne 0 ]; then
 	echo "Could not switch to temporary branch!? Weird."

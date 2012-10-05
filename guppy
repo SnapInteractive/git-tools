@@ -17,7 +17,7 @@ fi
 on_exit () {
 	if [ -n "$ON_BRANCH" ]; then
 		echo "Switching back to $ON_BRANCH..."
-		git co "$ON_BRANCH"
+		git checkout "$ON_BRANCH"
 	fi
 	if [ -n "$GIT_STASH" ]; then
 		echo "Restoring stash..."
