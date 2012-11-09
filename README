@@ -18,12 +18,6 @@ proon
 Cleans out old branches; removes all branches that have been merged into master
 and pushes the removal to origin.
 
-porg
-----
-
-Just does "git push origin BRANCH" for whatever branch you're currently on.
-Adding -f makes it "git push origin +BRANCH"
-
 pullrep
 -------
 
