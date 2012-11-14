@@ -64,8 +64,7 @@ if [ -z $2 ]; then
 		$r = json_decode(file_get_contents("php://stdin"));
 		if (isset($r->head->ref, $r->head->repo->owner->login, $r->base->sha)) {
 			echo $r->head->repo->owner->login, PHP_EOL,
-				$r->head->ref, PHP_EOL,
-				$r->base->sha, PHP_EOL;
+				$r->head->ref, PHP_EOL;
 		} else {
 			exit(1);
 		}
@@ -79,26 +78,44 @@ if [ -z $2 ]; then
 	echo " Done."
 	GH_USER=$(sed -n '1p' <(echo "$PR_INFO"))
 	GH_BRANCH=$(sed -n '2p' <(echo "$PR_INFO"))
-	BASE=$(sed -n '3p' <(echo "$PR_INFO"))
+	echo -n "Fetching pull request commit info from github..."
+	echo "https://api.github.com/repos/$GH_USER/$GH_REPO/pulls/$1/commits"
+	GH_COMMITS=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$GH_REPO/pulls/$1/commits")
+	MERGE_BASE=$(echo "$GH_COMMITS" | php -r '
+		$r = json_decode(file_get_contents("php://stdin"));
+		if (!is_array($r)) {
+			exit(1);
+		}
+		$last_commit = array_pop($r);
+		echo array_pop($last_commit->parents)->sha, PHP_EOL;
+	')
+	if [ $? -ne 0 ]; then
+		echo "Error when looking for merge-base."
+		echo "Here's the PR commit data from GitHub:"
+		echo "$GH_COMMITS"
+		exit 1
+	fi
+	FF="--ff-only"
 else
 	GH_USER="$1"
 	GH_BRANCH="$2"
-	BASE="master"
+	MERGE_BASE="master"
+	FF=""
 	# would like to improve by searching for actual base of branch but API is not good for this
 fi
 
 TEMP_BRANCH="$GH_USER-$GH_BRANCH"
 
-git checkout -b "$TEMP_BRANCH" "$BASE" > /dev/null 2>&1
+git checkout -b "$TEMP_BRANCH" "$MERGE_BASE" > /dev/null 2>&1
 
 if [ $? -ne 0 ]; then
-	echo "git checkout -b \"$TEMP_BRANCH\" \"$BASE\" failed."
-	echo "Do you have ref $BASE in your local repo?"
+	echo "git checkout -b \"$TEMP_BRANCH\" \"$MERGE_BASE\" failed."
+	echo "Do you have ref $MERGE_BASE in your local repo?"
 	exit 1
 fi
 
 echo -n "Pulling changes..."
-git pull --quiet https://github.com/$GH_USER/$GH_REPO.git "$GH_BRANCH"
+git pull --quiet $FF https://github.com/$GH_USER/$GH_REPO.git "$GH_BRANCH"
 
 if [ $? -ne 0 ]; then
 	echo
