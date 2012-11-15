@@ -86,8 +86,8 @@ if [ -z $2 ]; then
 		if (!is_array($r)) {
 			exit(1);
 		}
-		$last_commit = array_pop($r);
-		echo array_pop($last_commit->parents)->sha, PHP_EOL;
+		$first_commit = array_shift($r);
+		echo array_pop($first_commit->parents)->sha, PHP_EOL;
 	')
 	if [ $? -ne 0 ]; then
 		echo "Error when looking for merge-base."
