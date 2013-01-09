@@ -11,8 +11,6 @@
 #
 # If you're creating a new .netrc file please chmod 600 it.
 
-GH_REPO=AYI
-
 # Here's where you set your diff'ing tool:
 #
 # If you don't have a tool ready, use this; it will display a list of files
@@ -24,9 +22,9 @@ DIFF_CMD="git diff --name-status %s; bash"
 DIFF_CMD="vim '+call Gbdiff(\"%s\")'"
 
 # Are you in the right repo?
-CHECK_ORIGIN=$(git remote -v | grep "^origin.\+/$GH_REPO\>.\+(push)$")
-if [ -z "$CHECK_ORIGIN" ]; then
-	echo "You need to be in a \"$GH_REPO\" clone with a pushable \"origin\" remote!"
+REPO=$(git remote -v | grep "^origin	.\+(push)$" | sed "s%^origin.\+/\([^ ]\+\) (push)$%\1%" | sed s/.git$//)
+if [ -z "$REPO" ]; then
+	echo "You need to be in a repo with a pushable \"origin\" remote!"
 	exit 1
 fi
 
@@ -59,7 +57,7 @@ trap on_exit EXIT
 
 if [ -z $2 ]; then
 	echo -n "Fetching pull request info from github..."
-	GH_PR=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$GH_REPO/pulls/$1")
+	GH_PR=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$REPO/pulls/$1")
 	PR_INFO=$(echo "$GH_PR" | php -r '
 		$r = json_decode(file_get_contents("php://stdin"));
 		if (isset($r->head->ref, $r->head->repo->owner->login, $r->base->sha)) {
@@ -72,15 +70,15 @@ if [ -z $2 ]; then
 	if [ $? -ne 0 ]; then
 		echo "Pull request not found or not decodable!"
 		echo "To see the pull request data, run:"
-		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/$GH_REPO/pulls/$1"
+		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/$REPO/pulls/$1"
 		exit 1
 	fi
 	echo " Done."
 	GH_USER=$(sed -n '1p' <(echo "$PR_INFO"))
 	GH_BRANCH=$(sed -n '2p' <(echo "$PR_INFO"))
 	echo -n "Fetching pull request commit info from github..."
-	echo "https://api.github.com/repos/$GH_USER/$GH_REPO/pulls/$1/commits"
-	GH_COMMITS=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$GH_REPO/pulls/$1/commits")
+	echo "https://api.github.com/repos/$GH_USER/$REPO/pulls/$1/commits"
+	GH_COMMITS=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$REPO/pulls/$1/commits")
 	MERGE_BASE=$(echo "$GH_COMMITS" | php -r '
 		$r = json_decode(file_get_contents("php://stdin"));
 		if (!is_array($r)) {
@@ -115,7 +113,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo -n "Pulling changes..."
-git pull --quiet $FF https://github.com/$GH_USER/$GH_REPO.git "$GH_BRANCH"
+git pull --quiet $FF https://github.com/$GH_USER/$REPO.git "$GH_BRANCH"
 
 if [ $? -ne 0 ]; then
 	echo
