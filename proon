@@ -1,5 +1,5 @@
 #!/bin/bash
-# Delete all branches that have been merged to master && push deletes to remote origin
+# Delete all branches that have been merged to master or specified merge branch && push deletes to remote origin
 
 CHECK_ORIGIN=$(git remote -v | grep '^origin.\+(push)$')
 if [ -z "$CHECK_ORIGIN" ]; then
@@ -7,13 +7,21 @@ if [ -z "$CHECK_ORIGIN" ]; then
 	exit 1
 fi
 
-if [ "$1" = "-i" ]; then
-	INTERACTIVE="yes"
-else
-	INTERACTIVE=""
-fi
+INTERACTIVE=''
+MERGE_BRANCH='master'
+while getopts "ib:" OPTION
+do
+	case "$OPTION" in
+		i)
+			INTERACTIVE='yes'
+			;;
+		b)
+			MERGE_BRANCH="$OPTARG"
+			;;
+	esac
+done
 
-for BRANCH in $(git branch --merged master | grep -v '\<master\>\|^\*'); do
+for BRANCH in $(git branch --merged "$MERGE_BRANCH" | grep -v "\<master\>\|^\*\|\<$MERGE_BRANCH\>"); do
 	if [ -n "$INTERACTIVE" ]; then
 		read -p "$(basename $0): remove branch '$BRANCH'? (y)" RESPONSE
 		if [  "$RESPONSE" != 'y' ] && [ "$RESPONSE" != '' ]; then
