@@ -35,11 +35,11 @@ fi
 
 # Save whatever you're working on
 
-GIT_STASH=$(git status --porcelain | grep -v '^??')
+GIT_STASH=$(git status --porcelain)
 
 if [ -n "$GIT_STASH" ]; then
 	echo "Stashing current state..."
-	git stash > /dev/null
+	git stash save --include-untracked > /dev/null
 fi
 
 ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
