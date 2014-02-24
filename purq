@@ -83,6 +83,11 @@ if [ -n "$PR_MERGES" ]; then
 	exit 1
 fi
 
+# TODO: We can add support for diffing merged PRs here if we use this command:
+# git show :/^Merge
+# to set the base to the last merge instead of the merge-base with master
+# (which is effectively HEAD)
+
 echo "Launching diff'er..."
 
 eval $(printf "$DIFF_CMD" "$(git merge-base HEAD master)")
