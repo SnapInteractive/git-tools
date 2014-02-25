@@ -2,14 +2,8 @@
 # Examine a pull request or branch, comparing it to your master branch.
 # Will stash your current work and restore when you're done.
 #
-# Usage: $0 <github username> <branch name> OR $0 <pull request #>
+# Usage: $0 <pull request #> <remote = upstream>
 # 
-# You must have your .netrc file set up for github access; it should contain
-# two lines like this:
-# machine github.com login USERNAME password PASSWORD
-# machine api.github.com login USERNAME password PASSWORD
-#
-# If you're creating a new .netrc file please chmod 600 it.
 
 # Here's where you set your diff'ing tool:
 #
@@ -21,10 +15,21 @@ DIFF_CMD="git diff --name-status %s; bash"
 # This is my vim branch diffing tool; change it if you like.
 DIFF_CMD="vim '+call Gbdiff(\"%s\")'"
 
-# Are you in the right repo?
-REPO=$(git remote -v | grep "^origin	.\+(push)$" | sed "s%^origin.\+/\([^ ]\+\) (push)$%\1%" | sed s/.git$//)
+if [ -z "$1" ]; then
+	echo "Please provide the pull request number as the first argument."
+	exit
+fi
+
+if [ -n "$2" ]; then
+	REMOTE="$2"
+else
+	REMOTE=upstream
+fi
+
+# Check remote name, grab info
+REPO="$(git remote -v | grep "^$REMOTE	" | head -n 1 | sed 's/.*\t//' | sed 's/ (.*)//')"
 if [ -z "$REPO" ]; then
-	echo "You need to be in a repo with a pushable \"origin\" remote!"
+	echo "Unknown remote \"$REMOTE\"!"
 	exit 1
 fi
 
@@ -34,7 +39,7 @@ GIT_STASH=$(git status --porcelain | grep -v '^??')
 
 if [ -n "$GIT_STASH" ]; then
 	echo "Stashing current state..."
-	git stash
+	git stash > /dev/null
 fi
 
 ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
@@ -46,7 +51,7 @@ on_exit () {
 	git checkout "$ON_BRANCH"
 	if [ -n "$GIT_STASH" ]; then
 		echo "Restoring stash..."
-		git stash pop
+		git stash pop > /dev/null
 	fi
 
 	if [ -n "$TEMP_BRANCH" ]; then
@@ -55,76 +60,36 @@ on_exit () {
 }
 trap on_exit EXIT
 
-if [ -z $2 ]; then
-	echo -n "Fetching pull request info from github..."
-	GH_PR=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$REPO/pulls/$1")
-	PR_INFO=$(echo "$GH_PR" | php -r '
-		$r = json_decode(file_get_contents("php://stdin"));
-		if (isset($r->head->ref, $r->head->repo->owner->login, $r->base->sha)) {
-			echo $r->head->repo->owner->login, PHP_EOL,
-				$r->head->ref, PHP_EOL;
-		} else {
-			exit(1);
-		}
-	')
-	if [ $? -ne 0 ]; then
-		echo "Pull request not found or not decodable!"
-		echo "To see the pull request data, run:"
-		echo "curl -s --netrc https://api.github.com/repos/SnapInteractive/$REPO/pulls/$1"
-		exit 1
-	fi
-	echo " Done."
-	GH_USER=$(sed -n '1p' <(echo "$PR_INFO"))
-	GH_BRANCH=$(sed -n '2p' <(echo "$PR_INFO"))
-	echo -n "Fetching pull request commit info from github..."
-	echo "https://api.github.com/repos/$GH_USER/$REPO/pulls/$1/commits"
-	GH_COMMITS=$(curl -s --netrc "https://api.github.com/repos/SnapInteractive/$REPO/pulls/$1/commits")
-	MERGE_BASE=$(echo "$GH_COMMITS" | php -r '
-		$r = json_decode(file_get_contents("php://stdin"));
-		if (!is_array($r)) {
-			exit(1);
-		}
-		$first_commit = array_shift($r);
-		echo array_pop($first_commit->parents)->sha, PHP_EOL;
-	')
-	if [ $? -ne 0 ]; then
-		echo "Error when looking for merge-base."
-		echo "Here's the PR commit data from GitHub:"
-		echo "$GH_COMMITS"
-		exit 1
-	fi
-	FF="--ff-only"
-else
-	GH_USER="$1"
-	GH_BRANCH="$2"
-	MERGE_BASE="master"
-	FF=""
-	# would like to improve by searching for actual base of branch but API is not good for this
-fi
+TEMP_BRANCH="PR-$1"
 
-TEMP_BRANCH="$GH_USER-$GH_BRANCH"
-
-git checkout -b "$TEMP_BRANCH" "$MERGE_BASE" > /dev/null 2>&1
+git fetch "$REPO" refs/pull/$1/head:$TEMP_BRANCH >/dev/null 2>&1
 
 if [ $? -ne 0 ]; then
-	echo "git checkout -b \"$TEMP_BRANCH\" \"$MERGE_BASE\" failed."
-	echo "Do you have ref $MERGE_BASE in your local repo?"
+	echo "git fetch "$REPO" refs/pull/$1/head:$TEMP_BRANCH failed."
 	exit 1
 fi
 
-echo -n "Pulling changes..."
-git pull --quiet $FF https://github.com/$GH_USER/$REPO.git "$GH_BRANCH"
+git checkout $TEMP_BRANCH
 
 if [ $? -ne 0 ]; then
-	echo
-	echo "Failed fetching branch \"$GH_BRANCH\" from \"$GH_USER\"'s repo!"
+	echo "git checkout $TEMP_BRANCH failed."
 	exit 1
 fi
 
-echo " Done."
+MERGE_BASE="$(git merge-base HEAD master)"
+PR_MERGES="$(git log --pretty=oneline $MERGE_BASE..HEAD | grep "[a-f0-9]\{40\} Merge pull request #")"
+if [ -n "$PR_MERGES" ]; then
+	echo "Looks like you need to rebase... this PR's merge base is not in your master branch."
+	exit 1
+fi
+
+# TODO: We can add support for diffing merged PRs here if we use this command:
+# git show :/^Merge
+# to set the base to the last merge instead of the merge-base with master
+# (which is effectively HEAD)
+
 echo "Launching diff'er..."
 
 eval $(printf "$DIFF_CMD" "$(git merge-base HEAD master)")
 
 exit 0
-
