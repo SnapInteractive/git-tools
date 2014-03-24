@@ -13,7 +13,18 @@
 DIFF_CMD="git diff --name-status %s; bash"
 #
 # This is my vim branch diffing tool; change it if you like.
-DIFF_CMD="vim '+call Gbdiff(\"%s\")'"
+my_diff () {
+	mtron >/tmp/mtron.log 2>&1 &
+	vim "+call Gbdiff(\"$1\")"
+}
+my_cleanup () {
+	ALREADY_RUNNING="$(ps u | grep tagphp | grep -v grep)"
+	if [ -z "$ALREADY_RUNNING" ]; then
+		tagphp >/dev/null 2>&1
+	fi
+}
+DIFF_CMD="my_diff %s"
+CLEANUP_CMD="my_cleanup &"
 
 if [ -z "$1" ]; then
 	echo "Please provide the pull request number as the first argument."
@@ -58,6 +69,7 @@ on_exit () {
 	if [ -n "$TEMP_BRANCH" ]; then
 		git branch -D "$TEMP_BRANCH"
 	fi
+	eval "$CLEANUP_CMD"
 }
 trap on_exit EXIT
 
