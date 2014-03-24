@@ -38,8 +38,9 @@ fi
 GIT_STASH=$(git status --porcelain)
 
 if [ -n "$GIT_STASH" ]; then
-	echo "Stashing current state..."
+	echo -n "Stashing current state..."
 	git stash save --include-untracked > /dev/null
+	echo " Stashed."
 fi
 
 ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
@@ -62,7 +63,9 @@ trap on_exit EXIT
 
 TEMP_BRANCH="PR-$1"
 
+echo -n "Fetching remote revisions..."
 git fetch "$REPO" refs/pull/$1/head:$TEMP_BRANCH >/dev/null 2>&1
+echo " Fetched."
 
 if [ $? -ne 0 ]; then
 	echo "git fetch "$REPO" refs/pull/$1/head:$TEMP_BRANCH failed."
