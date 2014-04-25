@@ -5,6 +5,16 @@
 # Usage: $0 <pull request #> <remote = upstream>
 # 
 
+MASTER=master
+# People using overly complicated branching models
+# often use "develop" or "dev" as their master
+for b in {develop,dev}; do
+	git branch | grep -q " $b$"
+	if [ $? -eq 0 ]; then
+		MASTER=$b
+	fi
+done
+
 # Here's where you set your diff'ing tool:
 #
 # If you don't have a tool ready, use this; it will display a list of files
@@ -91,20 +101,20 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-MERGE_BASE="$(git merge-base HEAD master)"
+MERGE_BASE="$(git merge-base HEAD $MASTER)"
 PR_MERGES="$(git log --pretty=oneline $MERGE_BASE..HEAD | grep "[a-f0-9]\{40\} Merge pull request #")"
 if [ -n "$PR_MERGES" ]; then
-	echo "Looks like you need to rebase... this PR's merge base is not in your master branch."
+	echo "Looks like you need to rebase... this PR's merge base is not in your $MASTER branch."
 	exit 1
 fi
 
 # TODO: We can add support for diffing merged PRs here if we use this command:
 # git show :/^Merge
-# to set the base to the last merge instead of the merge-base with master
+# to set the base to the last merge instead of the merge-base with $MASTER
 # (which is effectively HEAD)
 
 echo "Launching diff'er..."
 
-eval $(printf "$DIFF_CMD" "$(git merge-base HEAD master)")
+eval $(printf "$DIFF_CMD" "$(git merge-base HEAD $MASTER)")
 
 exit 0
