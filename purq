@@ -5,6 +5,16 @@
 # Usage: $0 <pull request #> <remote = upstream>
 # 
 
+MASTER=master
+# People using overly complicated branching models
+# often use "develop" or "dev" as their master
+for b in {develop,dev}; do
+	git branch | grep -q " $b$"
+	if [ $? -eq 0 ]; then
+		MASTER=$b
+	fi
+done
+
 # Here's where you set your diff'ing tool:
 #
 # If you don't have a tool ready, use this; it will display a list of files
@@ -13,7 +23,18 @@
 DIFF_CMD="git diff --name-status %s; bash"
 #
 # This is my vim branch diffing tool; change it if you like.
-DIFF_CMD="vim '+call Gbdiff(\"%s\")'"
+my_diff () {
+	mtron >/tmp/mtron.log 2>&1 &
+	vim "+call Gbdiff(\"$1\")"
+}
+my_cleanup () {
+	ALREADY_RUNNING="$(ps u | grep tagphp | grep -v grep)"
+	if [ -z "$ALREADY_RUNNING" ]; then
+		tagphp >/dev/null 2>&1
+	fi
+}
+DIFF_CMD="my_diff %s"
+CLEANUP_CMD="my_cleanup &"
 
 if [ -z "$1" ]; then
 	echo "Please provide the pull request number as the first argument."
@@ -38,8 +59,9 @@ fi
 GIT_STASH=$(git status --porcelain)
 
 if [ -n "$GIT_STASH" ]; then
-	echo "Stashing current state..."
+	echo -n "Stashing current state..."
 	git stash save --include-untracked > /dev/null
+	echo " Stashed."
 fi
 
 ON_BRANCH=$(git branch | grep '^* ' | sed 's/^* //')
@@ -57,12 +79,15 @@ on_exit () {
 	if [ -n "$TEMP_BRANCH" ]; then
 		git branch -D "$TEMP_BRANCH"
 	fi
+	eval "$CLEANUP_CMD"
 }
 trap on_exit EXIT
 
 TEMP_BRANCH="PR-$1"
 
+echo -n "Fetching remote revisions..."
 git fetch "$REPO" refs/pull/$1/head:$TEMP_BRANCH >/dev/null 2>&1
+echo " Fetched."
 
 if [ $? -ne 0 ]; then
 	echo "git fetch "$REPO" refs/pull/$1/head:$TEMP_BRANCH failed."
@@ -76,20 +101,20 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-MERGE_BASE="$(git merge-base HEAD master)"
+MERGE_BASE="$(git merge-base HEAD $MASTER)"
 PR_MERGES="$(git log --pretty=oneline $MERGE_BASE..HEAD | grep "[a-f0-9]\{40\} Merge pull request #")"
 if [ -n "$PR_MERGES" ]; then
-	echo "Looks like you need to rebase... this PR's merge base is not in your master branch."
+	echo "Looks like you need to rebase... this PR's merge base is not in your $MASTER branch."
 	exit 1
 fi
 
 # TODO: We can add support for diffing merged PRs here if we use this command:
 # git show :/^Merge
-# to set the base to the last merge instead of the merge-base with master
+# to set the base to the last merge instead of the merge-base with $MASTER
 # (which is effectively HEAD)
 
 echo "Launching diff'er..."
 
-eval $(printf "$DIFF_CMD" "$(git merge-base HEAD master)")
+eval $(printf "$DIFF_CMD" "$(git merge-base HEAD $MASTER)")
 
 exit 0
